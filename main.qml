@@ -11,7 +11,7 @@ ApplicationWindow {
     width: 500
     height: mainLayout.implicitHeight + 2 * margin
     minimumWidth: mainLayout.Layout.minimumWidth + 2 * margin
-    minimumHeight: mainLayout.Layout.minimumHeight + 2 * margin
+    minimumHeight: 300
 
     flags: Qt.FramelessWindowHint | Qt.Window
     color: "transparent"
@@ -21,7 +21,7 @@ ApplicationWindow {
         anchors.fill: parent
         anchors.margins: 0
         radius: 10
-        border.width: 3
+        border.width: 2
         border.color: "white"
     }
 
@@ -58,6 +58,7 @@ ApplicationWindow {
         sequence:"Ctrl+l"
         onActivated: searchInput.selectAll()
     }
+
     Component {
         id: passwordEntry
         Text {
@@ -71,31 +72,52 @@ ApplicationWindow {
         id: mainLayout
         anchors.fill: parent
         anchors.margins: margin
-
-        TextField {
-            id: searchInput
-            font.pixelSize: 24
-            focus: true
+        RowLayout{
             Layout.fillWidth: true
-            onTextChanged: passwords.query(text)
-            onAccepted: passwords.copy()
-            textColor: "white"
-            style: TextFieldStyle {
+            TextField {
+                id: searchInput
+                font.pixelSize: 24
+                focus: true
+                onTextChanged: passwords.query(text)
+                onAccepted: passwords.copy()
                 textColor: "white"
-                background: Rectangle {
-                    radius: 5
-                    border.color: "#666"
-                    border.width: 1
-                    color: "#333"
+                style: TextFieldStyle {
+                    textColor: "white"
+                    background: Rectangle {
+                        radius: 5
+                        border.color: "#666"
+                        border.width: 1
+                        color: "#333"
+                    }
                 }
+                Layout.fillWidth: true
+            }
+            Image {
+                source: "logo.svg"
+                fillMode: Image.PreserveAspectFit
+                Layout.alignment: Qt.AlignRight
+                Layout.maximumWidth: 32
             }
         }
-        ListView {
-            id: hitList
-            model: passwords.len
-            delegate: passwordEntry
+        ScrollView{
             Layout.fillHeight: true
-            Layout.minimumHeight: 300
+            Layout.fillWidth: true
+            style: ScrollViewStyle{
+                transientScrollBars: true
+                scrollToClickedPosition : true
+            }
+            ListView {
+                id: hitList
+                model: passwords.len
+                delegate: passwordEntry
+                Layout.fillHeight: true
+            }
+        }
+        Text {
+            id: status
+            text: passwords.status 
+            font.pixelSize: 14
+            color: "#aaa"
         }
     }
 }

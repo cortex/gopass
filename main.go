@@ -131,7 +131,11 @@ func (ps *Passwords) ClearClipboard() {
 }
 
 func (ps *Passwords) Copy() {
-	out, _ := ps.hits[ps.Selected].Decrypt()
+	if len(ps.hits) >= ps.Selected {
+		ps.SetStatus("No password selected")
+		return
+	}
+	out, _ := (ps.hits)[ps.Selected].Decrypt()
 	firstline, _, _ := bufio.NewReader(out).ReadLine()
 	if err := clipboard.WriteAll(string(firstline)); err != nil {
 		panic(err)

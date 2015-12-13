@@ -131,7 +131,7 @@ func (ps *Passwords) ClearClipboard() {
 }
 
 func (ps *Passwords) Copy() {
-	if len(ps.hits) >= ps.Selected {
+	if ps.Selected >= len(ps.hits) {
 		ps.SetStatus("No password selected")
 		return
 	}

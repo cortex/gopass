@@ -1,6 +1,6 @@
 
-## gopass: Simple UI for password-store
-![Screenshot](screenshot.png)
+## Simple UI for password-store
+![Screenshot](screencast.gif)
 
 This is a very simple read-only UI for searching the passwords in your http://www.passwordstore.org/ password store. It is written in Go.
 

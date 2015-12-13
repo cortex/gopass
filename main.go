@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type Password struct {
@@ -21,12 +22,15 @@ type Password struct {
 }
 
 type Passwords struct {
-	passwords []Password
-	hits      []Password
-	query     string
-	Len       int
-	Prefix    string
-	Selected  int
+	passwords     []Password
+	hits          []Password
+	query         string
+	Len           int
+	Prefix        string
+	Selected      int
+	Status        string
+	countingDown  bool
+	countdownDone chan bool
 }
 
 func (ps *Passwords) Up() {
@@ -46,6 +50,7 @@ func (ps *Passwords) Down() {
 func (ps *Passwords) Add(p Password) {
 	ps.passwords = append(ps.passwords, p)
 	ps.updateHits()
+	ps.SetStatus(fmt.Sprintf("Indexed %d entries", ps.Len))
 }
 
 func (ps *Passwords) Password(index int) Password {
@@ -83,18 +88,64 @@ func (ps *Passwords) updateHits() {
 	qml.Changed(ps, &ps.Len)
 }
 
+func (ps *Passwords) SetStatus(s string) {
+	ps.Status = s
+	qml.Changed(ps, &ps.Status)
+}
+
 func (ps *Passwords) Query(q string) {
 	ps.query = q
 	ps.updateHits()
+	ps.SetStatus(fmt.Sprintf("Matched %d items", ps.Len))
+}
+
+func (ps *Passwords) killCountdown() {
+
+}
+
+func (ps *Passwords) ClearClipboard() {
+	if ps.countingDown {
+		ps.countdownDone <- true
+	}
+	ps.countingDown = true
+	t := time.NewTicker(1 * time.Second)
+	remaining := 5
+	for {
+		select {
+		case <-ps.countdownDone:
+			t.Stop()
+			ps.countingDown = false
+			return
+		case <-t.C:
+			ps.SetStatus(fmt.Sprintf("Will clear in %d seconds", remaining))
+			remaining--
+			if remaining <= 0 {
+				clipboard.WriteAll("")
+				ps.SetStatus("Clipboard cleared")
+				ps.countingDown = false
+				t.Stop()
+				return
+			}
+		}
+	}
 }
 
 func (ps *Passwords) Copy() {
-	fmt.Println("Copied to clipboard")
 	out, _ := ps.hits[ps.Selected].Decrypt()
 	firstline, _, _ := bufio.NewReader(out).ReadLine()
 	if err := clipboard.WriteAll(string(firstline)); err != nil {
 		panic(err)
 	}
+	ps.SetStatus("Copied to clipboard")
+	go ps.ClearClipboard()
+}
+
+func (ps *Passwords) Index(path string, info os.FileInfo, err error) error {
+	if strings.HasSuffix(path, ".gpg") {
+		name := strings.TrimSuffix(strings.TrimPrefix(path, passwords.Prefix), ".gpg")
+		ps.Add(Password{Name: name, Path: path})
+	}
+	return nil
 }
 
 var passwords Passwords
@@ -103,13 +154,6 @@ func (p Password) Decrypt() (io.Reader, error) {
 	file, _ := os.Open(p.Path)
 	defer file.Close()
 	return gpgme.Decrypt(file)
-}
-
-func showPass(path string, info os.FileInfo, err error) error {
-	name := strings.TrimSuffix(strings.TrimPrefix(path, passwords.Prefix), ".gpg")
-	fmt.Println(name)
-	passwords.Add(Password{Name: name, Path: path})
-	return nil
 }
 
 func run() error {
@@ -127,14 +171,12 @@ func run() error {
 	return nil
 }
 func main() {
-	fmt.Printf("Hello world")
 	usr, err := user.Current()
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(usr.HomeDir)
 	passwords.Prefix = path.Join(usr.HomeDir, ".password-store")
-	filepath.Walk(passwords.Prefix, showPass)
+	filepath.Walk(passwords.Prefix, passwords.Index)
 	if err := qml.Run(run); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

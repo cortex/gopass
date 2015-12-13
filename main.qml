@@ -22,7 +22,7 @@ ApplicationWindow {
         anchors.margins: 0
         radius: 10
         border.width: 2
-        border.color: "white"
+        border.color: "#aaa"
     }
 
     MouseArea {

@@ -1,11 +1,9 @@
 package main
 
+//go:generate genqrc assets/main.qml assets/logo.svg
 import (
 	"bufio"
 	"fmt"
-	"github.com/atotto/clipboard"
-	"github.com/proglottis/gpgme"
-	"gopkg.in/qml.v1"
 	"io"
 	"log"
 	"os"
@@ -14,6 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/atotto/clipboard"
+	"github.com/proglottis/gpgme"
+	"gopkg.in/qml.v1"
 )
 
 type Password struct {
@@ -163,13 +165,11 @@ func (p Password) Decrypt() (io.Reader, error) {
 func run() error {
 	engine := qml.NewEngine()
 	engine.Context().SetVar("passwords", &passwords)
-	controls, err := engine.LoadFile("main.qml")
+	controls, err := engine.LoadFile("qrc:/assets/main.qml")
 	if err != nil {
 		return err
 	}
-
 	window := controls.CreateWindow(nil)
-
 	window.Show()
 	window.Wait()
 	return nil

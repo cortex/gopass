@@ -111,7 +111,7 @@ func (ps *Passwords) ClearClipboard() {
 	}
 	ps.countingDown = true
 	t := time.NewTicker(1 * time.Second)
-	remaining := 5
+	remaining := 45
 	for {
 		select {
 		case <-ps.countdownDone:

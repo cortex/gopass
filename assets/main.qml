@@ -2,6 +2,7 @@ import QtQuick 2.5
 import QtQuick.Controls 1.3
 import QtQuick.Layouts 1.2
 import QtQuick.Controls.Styles 1.4
+import QtQuick.Window 2.2
 
 ApplicationWindow {
     id: rootWindow
@@ -12,6 +13,8 @@ ApplicationWindow {
     height: mainLayout.implicitHeight + 2 * margin
     minimumWidth: mainLayout.Layout.minimumWidth + 2 * margin
     minimumHeight: 300
+
+    x: (Screen.width - width) / 2
 
     flags: Qt.FramelessWindowHint | Qt.Window
     color: "transparent"

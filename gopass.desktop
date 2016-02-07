@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=GoPass
+Desc=Password manager
+Exec=gopass
+Icon=gopass
+StartupNotify=true

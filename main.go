@@ -163,6 +163,7 @@ func (p Password) Decrypt() (io.Reader, error) {
 }
 
 func run() error {
+	qml.SetApplicationName("GoPass")
 	engine := qml.NewEngine()
 	engine.Context().SetVar("passwords", &passwords)
 	controls, err := engine.LoadFile("qrc:/assets/main.qml")

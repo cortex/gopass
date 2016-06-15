@@ -1,0 +1,4 @@
+[submodule "vendor/gopkg.in/qml.v1"]
+	path = vendor/gopkg.in/qml.v1
+	url = git://github.com/cortex/qml
+	branch = go1.6

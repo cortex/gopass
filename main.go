@@ -35,6 +35,10 @@ type Passwords struct {
 	countdownDone chan bool
 }
 
+func (ps *Passwords) Quit(){
+	os.Exit(0)
+}
+
 func (ps *Passwords) Up() {
 	if ps.Selected > 0 {
 		ps.Selected--

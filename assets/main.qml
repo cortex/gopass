@@ -43,23 +43,38 @@ ApplicationWindow {
             rootWindow.y += delta.y;
         }
     }
+
     Shortcut {
-        id: up
         sequence:"Ctrl+K"
         context: Qt.ApplicationShortcut
         onActivated: passwords.up()
     }
 
     Shortcut {
-        id: down
+        sequence:"Up"
+        context: Qt.ApplicationShortcut
+        onActivated: passwords.up()
+    }
+
+    Shortcut {
         sequence:"Ctrl+j"
         onActivated: passwords.down()
     }
 
     Shortcut {
-        id: selectAll
+        sequence:"Down"
+        onActivated: passwords.down()
+    }
+
+    Shortcut {
         sequence:"Ctrl+l"
         onActivated: searchInput.selectAll()
+    }
+
+    Shortcut {
+        sequence: "Esc"
+        context: Qt.ApplicationShortcut
+        onActivated: passwords.quit()
     }
 
     Component {

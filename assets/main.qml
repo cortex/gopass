@@ -9,10 +9,10 @@ ApplicationWindow {
     visible: true
     title: "GoPass"
     property int margin: 10
-    width: 500
+    width: 600
     height: mainLayout.implicitHeight + 2 * margin
     minimumWidth: mainLayout.Layout.minimumWidth + 2 * margin
-    minimumHeight: 300
+    minimumHeight: 400
 
     x: (Screen.width - width) / 2
 
@@ -97,7 +97,7 @@ ApplicationWindow {
                 font.pixelSize: 24
                 focus: true
                 onTextChanged: passwords.query(text)
-                onAccepted: passwords.copy()
+                onAccepted: passwords.copyToClipboard()
                 textColor: "white"
                 style: TextFieldStyle {
                     textColor: "white"

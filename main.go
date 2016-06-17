@@ -173,7 +173,7 @@ func (ps *Passwords) indexReset() {
 
 func (ps *Passwords) indexFile(path string, info os.FileInfo, err error) error {
 	if strings.HasSuffix(path, ".gpg") {
-		name := strings.TrimSuffix(strings.TrimPrefix(path, passwords.Prefix), ".gpg")
+		name := strings.TrimSuffix(strings.TrimPrefix(path, passwords.Prefix+"/"), ".gpg")
 		ps.add(Password{Name: name, Path: path})
 	}
 	return nil
@@ -227,7 +227,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	passwords.Prefix = path.Join(usr.HomeDir, ".password-store")
+	passwords.Prefix, err = filepath.EvalSymlinks(
+		path.Join(usr.HomeDir, ".password-store"),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 	passwords.indexAll()
 	passwords.watch()
 	if err := qml.Run(run); err != nil {

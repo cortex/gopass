@@ -35,6 +35,7 @@ type Passwords struct {
 	Prefix        string
 	Selected      int
 	Status        string
+	Metadata      string
 	countingDown  bool
 	countdownDone chan bool
 }
@@ -58,6 +59,11 @@ func (ps *Passwords) Down() {
 		ps.Selected++
 		qml.Changed(ps, &ps.Selected)
 	}
+}
+
+// Clear metadata
+func (ps *Passwords) Clearmetadata() {
+	ps.setMetadata("")
 }
 
 // Password gets the password at a specific index
@@ -88,6 +94,7 @@ func (ps *Passwords) ClearClipboard() {
 			remaining--
 			if remaining <= 0 {
 				clipboard.WriteAll("")
+				ps.setMetadata("")
 				ps.setStatus("Clipboard cleared")
 				ps.countingDown = false
 				t.Stop()
@@ -104,12 +111,16 @@ func (ps *Passwords) CopyToClipboard() {
 		return
 	}
 	out, _ := (ps.hits)[ps.Selected].decrypt()
-	firstline, _, _ := bufio.NewReader(out).ReadLine()
-	if err := clipboard.WriteAll(string(firstline)); err != nil {
+	nr := bufio.NewReader(out)
+	firstline,_ := nr.ReadString('\n')
+	if err := clipboard.WriteAll(firstline); err != nil {
 		panic(err)
 	}
 	ps.setStatus("Copied to clipboard")
 	go ps.ClearClipboard()
+
+	metadata,_ := nr.ReadString('\003')
+	ps.setMetadata(metadata)
 }
 
 // Query updates the hitlist with the given query
@@ -162,6 +173,11 @@ func (ps *Passwords) updateHits() {
 func (ps *Passwords) setStatus(s string) {
 	ps.Status = s
 	qml.Changed(ps, &ps.Status)
+}
+
+func (ps *Passwords) setMetadata(s string) {
+	ps.Metadata = s
+	qml.Changed(ps, &ps.Metadata)
 }
 
 func (ps *Passwords) indexReset() {

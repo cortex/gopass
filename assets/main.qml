@@ -67,6 +67,11 @@ ApplicationWindow {
     }
 
     Shortcut {
+        sequence:"Ctrl+r"
+        onActivated: passwords.clearmetadata()
+    }
+
+    Shortcut {
         sequence:"Ctrl+l"
         onActivated: searchInput.selectAll()
     }
@@ -133,9 +138,15 @@ ApplicationWindow {
         }
         Text {
             id: status
-            text: passwords.status 
+            text: passwords.status
             font.pixelSize: 14
             color: "#aaa"
+        }
+        Text {
+            id: metadata
+            text: passwords.metadata
+            font.pixelSize: 14
+            color: "#fa5858"
         }
     }
 }

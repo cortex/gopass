@@ -173,7 +173,13 @@ func (ps *Passwords) indexReset() {
 
 func (ps *Passwords) indexFile(path string, info os.FileInfo, err error) error {
 	if strings.HasSuffix(path, ".gpg") {
-		name := strings.TrimSuffix(strings.TrimPrefix(path, passwords.Prefix+"/"), ".gpg")
+		name := strings.TrimPrefix(path, passwords.Prefix)
+		name = strings.TrimSuffix(name, ".gpg")
+		name = strings.TrimPrefix(name, "/")
+		const MaxLen = 40
+		if len(name) > MaxLen {
+			name = "..." + name[len(name)-MaxLen:]
+		}
 		ps.add(Password{Name: name, Path: path})
 	}
 	return nil

@@ -142,11 +142,25 @@ ApplicationWindow {
             font.pixelSize: 14
             color: "#aaa"
         }
-        Text {
-            id: metadata
-            text: passwords.metadata
-            font.pixelSize: 14
-            color: "#fa5858"
+
+        ScrollView{
+            Layout.fillHeight: true
+            Layout.fillWidth: true
+            Layout.preferredHeight: metadata.implicitHeight
+            style: ScrollViewStyle{
+                transientScrollBars: true
+                scrollToClickedPosition : true
+            }
+
+            TextEdit {
+                id: metadata
+                selectByMouse: true
+                readOnly: true
+                text: passwords.metadata
+                font.pixelSize: 14
+                color: "#fa5858"
+                wrapMode: TextEdit.WordWrap
+            }
         }
     }
 }

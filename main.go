@@ -3,6 +3,7 @@ package main
 //go:generate genqrc assets/main.qml assets/logo.svg
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -112,14 +113,14 @@ func (ps *Passwords) CopyToClipboard() {
 	}
 	out, _ := (ps.hits)[ps.Selected].decrypt()
 	nr := bufio.NewReader(out)
-	firstline,_ := nr.ReadString('\n')
+	firstline, _ := nr.ReadString('\n')
 	if err := clipboard.WriteAll(firstline); err != nil {
 		panic(err)
 	}
 	ps.setStatus("Copied to clipboard")
 	go ps.ClearClipboard()
 
-	metadata,_ := nr.ReadString('\003')
+	metadata, _ := nr.ReadString('\003')
 	ps.setMetadata(metadata)
 }
 
@@ -228,7 +229,51 @@ func (ps *Passwords) watch() {
 	}()
 }
 
+func findPasswordStore() (string, error) {
+
+	var homeDir string
+	if usr, err := user.Current(); err == nil {
+		homeDir = usr.HomeDir
+	}
+
+	pathCandidates := []string{
+		os.Getenv("PASSWORD_STORE_DIR"),
+		path.Join(homeDir, ".password-store"),
+		path.Join(homeDir, "password-store"),
+	}
+
+	for _, p := range pathCandidates {
+		var err error
+		if p, err = filepath.EvalSymlinks(p); err != nil {
+			continue
+		}
+		if _, err = os.Stat(p); err != nil {
+			continue
+		}
+		return p, nil
+	}
+	return "", errors.New("Couldn't find a valid password store")
+}
+
+func (ps *Passwords) init() {
+	path, err := findPasswordStore()
+	if err != nil {
+		log.Fatal(err)
+	}
+	ps.Prefix = path
+	passwords.indexAll()
+	passwords.watch()
+}
+
 var passwords Passwords
+
+func main() {
+	passwords.init()
+	if err := qml.Run(run); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+}
 
 func run() error {
 	qml.SetApplicationName("GoPass")
@@ -242,23 +287,4 @@ func run() error {
 	window.Show()
 	window.Wait()
 	return nil
-}
-
-func main() {
-	usr, err := user.Current()
-	if err != nil {
-		log.Fatal(err)
-	}
-	passwords.Prefix, err = filepath.EvalSymlinks(
-		path.Join(usr.HomeDir, ".password-store"),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	passwords.indexAll()
-	passwords.watch()
-	if err := qml.Run(run); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
 }

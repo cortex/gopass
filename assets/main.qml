@@ -160,8 +160,6 @@ ApplicationWindow {
           radius: 10
         }
         TextEdit {
-          anchors.fill: parent
-          anchors.margins: 15
           id: metadata
           selectByMouse: true
           readOnly: true

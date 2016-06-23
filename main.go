@@ -3,101 +3,77 @@ package main
 //go:generate genqrc assets/main.qml assets/logo.svg
 import (
 	"bufio"
-	"errors"
 	"fmt"
-	"io"
-	"log"
 	"os"
-	"os/user"
-	"path"
-	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/rjeczalik/notify"
-
 	"github.com/atotto/clipboard"
-	"github.com/proglottis/gpgme"
 	"gopkg.in/qml.v1"
 )
 
-// A Password entry in Passwords
-type Password struct {
-	Name string
-	Path string
-}
-
-// Passwords is the model for the password UI
-type Passwords struct {
-	passwords     []Password
+// UI is the model for the password UI
+type UI struct {
+	store         *PasswordStore
 	hits          []Password
 	query         string
 	Len           int
-	Prefix        string
-	Selected      int
 	Status        string
+	Countdown     float64
+	ShowMetadata  bool
 	Metadata      string
 	countingDown  bool
 	countdownDone chan bool
 }
 
 // Quit the application
-func (ps *Passwords) Quit() {
+func (ui *UI) Quit() {
 	os.Exit(0)
 }
 
-// Up moves the selection up
-func (ps *Passwords) Up() {
-	if ps.Selected > 0 {
-		ps.Selected--
-		qml.Changed(ps, &ps.Selected)
-	}
+// Clearmetadata clears the displayed metadata
+func (ui *UI) Clearmetadata() {
+	ui.setMetadata("")
 }
 
-// Down moves the selection down
-func (ps *Passwords) Down() {
-	if ps.Selected < ps.Len {
-		ps.Selected++
-		qml.Changed(ps, &ps.Selected)
-	}
-}
-
-// Clear metadata
-func (ps *Passwords) Clearmetadata() {
-	ps.setMetadata("")
+// ToggleShowMetadata toggles between showing and not showing metadata
+func (ui *UI) ToggleShowMetadata() {
+	ui.ShowMetadata = !ui.ShowMetadata
+	qml.Changed(ui, &ui.ShowMetadata)
 }
 
 // Password gets the password at a specific index
-func (ps *Passwords) Password(index int) Password {
-	if index > len(ps.hits) {
-		fmt.Println("Bad password fetch", index, len(ps.hits), ps.Len)
+func (ui *UI) Password(index int) Password {
+	if index > len(ui.hits) {
+		fmt.Println("Bad password fetch", index, len(ui.hits), ui.Len)
 		return Password{}
 	}
-	return ps.hits[index]
+	return ui.hits[index]
 }
 
 // ClearClipboard clears the clipboard
-func (ps *Passwords) ClearClipboard() {
-	if ps.countingDown {
-		ps.countdownDone <- true
+func (ui *UI) ClearClipboard() {
+	if ui.countingDown {
+		ui.countdownDone <- true
 	}
-	ps.countingDown = true
-	t := time.NewTicker(1 * time.Second)
-	remaining := 45
+	ui.countingDown = true
+	tick := 10 * time.Millisecond
+	t := time.NewTicker(tick)
+	remaining := 15.0
 	for {
 		select {
-		case <-ps.countdownDone:
+		case <-ui.countdownDone:
 			t.Stop()
-			ps.countingDown = false
+			ui.countingDown = false
 			return
 		case <-t.C:
-			ps.setStatus(fmt.Sprintf("Will clear in %d seconds", remaining))
-			remaining--
+			ui.setCountdown(remaining)
+			ui.setStatus(fmt.Sprintf("Will clear in %.f seconds", remaining))
+			remaining -= tick.Seconds()
 			if remaining <= 0 {
 				clipboard.WriteAll("")
-				ps.setMetadata("")
-				ps.setStatus("Clipboard cleared")
-				ps.countingDown = false
+				ui.Clearmetadata()
+				ui.setStatus("Clipboard cleared")
+				ui.countingDown = false
 				t.Stop()
 				return
 			}
@@ -106,169 +82,62 @@ func (ps *Passwords) ClearClipboard() {
 }
 
 // CopyToClipboard copies the selected password to the system clipboard
-func (ps *Passwords) CopyToClipboard() {
-	if ps.Selected >= len(ps.hits) {
-		ps.setStatus("No password selected")
+func (ui *UI) CopyToClipboard(selected int) {
+	fmt.Println("test")
+	if selected >= len(ui.hits) {
+		ui.setStatus("No password selected")
 		return
 	}
-	out, _ := (ps.hits)[ps.Selected].decrypt()
+	out, _ := (ui.hits)[selected].decrypt()
 	nr := bufio.NewReader(out)
 	firstline, _ := nr.ReadString('\n')
 	if err := clipboard.WriteAll(firstline); err != nil {
 		panic(err)
 	}
-	ps.setStatus("Copied to clipboard")
-	go ps.ClearClipboard()
+	ui.setStatus("Copied to clipboard")
+	go ui.ClearClipboard()
 
 	metadata, _ := nr.ReadString('\003')
-	ps.setMetadata(metadata)
+	ui.setMetadata(metadata)
 }
 
 // Query updates the hitlist with the given query
-func (ps *Passwords) Query(q string) {
-	ps.query = q
-	ps.updateHits()
-	ps.setStatus(fmt.Sprintf("Matched %d items", ps.Len))
+func (ui *UI) Query(q string) {
+	ui.query = q
+	ui.Update("queried")
+	//ui.setStatus(fmt.Sprintf("Matched %d items", ui.Len))
 }
 
-func (ps *Passwords) add(p Password) {
-	ps.passwords = append(ps.passwords, p)
-	ps.updateHits()
-	ps.setStatus(fmt.Sprintf("Indexed %d entries", ps.Len))
+func (ui *UI) setStatus(s string) {
+	ui.Status = s
+	qml.Changed(ui, &ui.Status)
 }
 
-func match(query, candidate string) bool {
-	lowerQuery := strings.ToLower(query)
-	queryParts := strings.Split(lowerQuery, " ")
-
-	lowerCandidate := strings.ToLower(candidate)
-
-	for _, p := range queryParts {
-		if !strings.Contains(
-			strings.ToLower(lowerCandidate),
-			strings.ToLower(p),
-		) {
-			return false
-		}
-	}
-	return true
-
+func (ui *UI) setCountdown(c float64) {
+	ui.Countdown = c
+	qml.Changed(ui, &ui.Countdown)
+}
+func (ui *UI) setMetadata(s string) {
+	ui.Metadata = s
+	qml.Changed(ui, &ui.Metadata)
 }
 
-func (ps *Passwords) updateHits() {
-	qml.Lock()
-	ps.hits = nil
-	for _, p := range ps.passwords {
-		if match(ps.query, p.Name) {
-			ps.hits = append(ps.hits, p)
-		}
-	}
-	ps.Len = len(ps.hits)
-	if ps.Selected > ps.Len {
-		ps.Selected = ps.Len
-	}
-	qml.Changed(ps, &ps.Len)
-	qml.Unlock()
+// Update is called whenever the store is updated, so the UI needs refreshing
+func (ui *UI) Update(status string) {
+	ui.hits = ui.store.Query(ui.query)
+	ui.Len = len(ui.hits)
+	qml.Changed(ui, &ui.Len)
+	ui.setStatus(status)
 }
 
-func (ps *Passwords) setStatus(s string) {
-	ps.Status = s
-	qml.Changed(ps, &ps.Status)
-}
-
-func (ps *Passwords) setMetadata(s string) {
-	ps.Metadata = s
-	qml.Changed(ps, &ps.Metadata)
-}
-
-func (ps *Passwords) indexReset() {
-	ps.Len = 0
-	ps.Selected = 0
-	ps.hits = nil
-	ps.passwords = nil
-}
-
-func (ps *Passwords) indexFile(path string, info os.FileInfo, err error) error {
-	if strings.HasSuffix(path, ".gpg") {
-		name := strings.TrimPrefix(path, passwords.Prefix)
-		name = strings.TrimSuffix(name, ".gpg")
-		name = strings.TrimPrefix(name, "/")
-		const MaxLen = 40
-		if len(name) > MaxLen {
-			name = "..." + name[len(name)-MaxLen:]
-		}
-		ps.add(Password{Name: name, Path: path})
-	}
-	return nil
-}
-
-func (ps *Passwords) indexAll() {
-	qml.Lock()
-	ps.indexReset()
-	filepath.Walk(ps.Prefix, ps.indexFile)
-	qml.Unlock()
-}
-
-func (p Password) decrypt() (io.Reader, error) {
-	file, _ := os.Open(p.Path)
-	defer file.Close()
-	return gpgme.Decrypt(file)
-}
-
-func (ps *Passwords) watch() {
-	c := make(chan notify.EventInfo, 1)
-	if err := notify.Watch(ps.Prefix+"/...", c, notify.All); err != nil {
-		log.Fatal(err)
-	}
-
-	go func() {
-		for {
-			<-c
-			ps.indexAll()
-		}
-	}()
-}
-
-func findPasswordStore() (string, error) {
-
-	var homeDir string
-	if usr, err := user.Current(); err == nil {
-		homeDir = usr.HomeDir
-	}
-
-	pathCandidates := []string{
-		os.Getenv("PASSWORD_STORE_DIR"),
-		path.Join(homeDir, ".password-store"),
-		path.Join(homeDir, "password-store"),
-	}
-
-	for _, p := range pathCandidates {
-		var err error
-		if p, err = filepath.EvalSymlinks(p); err != nil {
-			continue
-		}
-		if _, err = os.Stat(p); err != nil {
-			continue
-		}
-		return p, nil
-	}
-	return "", errors.New("Couldn't find a valid password store")
-}
-
-func (ps *Passwords) init() {
-	path, err := findPasswordStore()
-	if err != nil {
-		log.Fatal(err)
-	}
-	ps.Prefix = path
-	passwords.indexAll()
-	passwords.watch()
-}
-
-var passwords Passwords
+var ui UI
+var ps *PasswordStore
 
 func main() {
-	passwords.init()
+	ps = NewPasswordStore()
+	ui.store = ps
+	ps.Subscribe(ui.Update)
+	ui.Update("Started")
 	if err := qml.Run(run); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -278,7 +147,7 @@ func main() {
 func run() error {
 	qml.SetApplicationName("GoPass")
 	engine := qml.NewEngine()
-	engine.Context().SetVar("passwords", &passwords)
+	engine.Context().SetVar("passwords", &ui)
 	controls, err := engine.LoadFile("qrc:/assets/main.qml")
 	if err != nil {
 		return err

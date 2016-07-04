@@ -2,3 +2,12 @@
 	path = vendor/gopkg.in/qml.v1
 	url = git://github.com/cortex/qml
 	branch = go1.6
+[submodule "vendor/github.com/atotto/clipboard"]
+	path = vendor/github.com/atotto/clipboard
+	url = git://github.com/atotto/clipboard
+[submodule "vendor/github.com/proglottis/gpgme"]
+	path = vendor/github.com/proglottis/gpgme
+	url = git://github.com/proglottis/gpgme
+[submodule "vendor/github.com/rjeczalik/notify"]
+	path = vendor/github.com/rjeczalik/notify
+	url = git://github.com/rjeczalik/notify

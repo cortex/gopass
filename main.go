@@ -83,7 +83,6 @@ func (ui *UI) ClearClipboard() {
 
 // CopyToClipboard copies the selected password to the system clipboard
 func (ui *UI) CopyToClipboard(selected int) {
-	fmt.Println("test")
 	if selected >= len(ui.hits) {
 		ui.setStatus("No password selected")
 		return

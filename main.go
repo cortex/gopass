@@ -2,7 +2,6 @@ package main
 
 //go:generate genqrc assets/main.qml assets/logo.svg
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"time"
@@ -13,16 +12,21 @@ import (
 
 // UI is the model for the password UI
 type UI struct {
-	store         *PasswordStore
-	hits          []Password
-	query         string
-	Len           int
-	Status        string
+	store    *PasswordStore
+	hits     []Password
+	query    string
+	Len      int
+	Selected int
+	Status   string
+
 	Countdown     float64
-	ShowMetadata  bool
-	Metadata      string
 	countingDown  bool
 	countdownDone chan bool
+
+	ShowMetadata bool
+	Metadata     string
+	Info         string
+	Cached       bool
 }
 
 // Quit the application
@@ -47,7 +51,8 @@ func (ui *UI) Password(index int) Password {
 		fmt.Println("Bad password fetch", index, len(ui.hits), ui.Len)
 		return Password{}
 	}
-	return ui.hits[index]
+	pw := ui.hits[index]
+	return pw
 }
 
 // ClearClipboard clears the clipboard
@@ -83,29 +88,31 @@ func (ui *UI) ClearClipboard() {
 
 // CopyToClipboard copies the selected password to the system clipboard
 func (ui *UI) CopyToClipboard(selected int) {
-	fmt.Println("test")
 	if selected >= len(ui.hits) {
 		ui.setStatus("No password selected")
 		return
 	}
-	out, _ := (ui.hits)[selected].decrypt()
-	nr := bufio.NewReader(out)
-	firstline, _ := nr.ReadString('\n')
-	if err := clipboard.WriteAll(firstline); err != nil {
+	pw := (ui.hits)[selected]
+	pass := pw.Password()
+	if err := clipboard.WriteAll(pass); err != nil {
 		panic(err)
 	}
 	ui.setStatus("Copied to clipboard")
 	go ui.ClearClipboard()
+	ui.Update("") // Trigger a manual update, since the key is probably unlocked now
+}
 
-	metadata, _ := nr.ReadString('\003')
-	ui.setMetadata(metadata)
+func (ui *UI) Select(selected int) {
+	ui.Selected = selected
+	// Trigger an update in a goroutine to keep QML from warning about a binding loop
+	go func() { ui.Update("") }()
 }
 
 // Query updates the hitlist with the given query
 func (ui *UI) Query(q string) {
 	ui.query = q
+	ui.setStatus(fmt.Sprintf("Matched %d items", ui.Len))
 	ui.Update("queried")
-	//ui.setStatus(fmt.Sprintf("Matched %d items", ui.Len))
 }
 
 func (ui *UI) setStatus(s string) {
@@ -126,7 +133,26 @@ func (ui *UI) setMetadata(s string) {
 func (ui *UI) Update(status string) {
 	ui.hits = ui.store.Query(ui.query)
 	ui.Len = len(ui.hits)
+	var pw Password
+	ui.Info = "Test"
+	if ui.Selected < ui.Len {
+		pw = (ui.hits)[ui.Selected]
+		ki := pw.KeyInfo()
+		ui.Info = fmt.Sprintf("Encrypted with %d bit %s key %s",
+			ki.BitLength, ki.Algorithm, ki.Fingerprint)
+		ui.Cached = ki.Cached
+	}
+
+	if ui.ShowMetadata {
+		ui.Metadata = pw.Metadata()
+	} else {
+		ui.Metadata = "Press enter to decrypt"
+	}
+
 	qml.Changed(ui, &ui.Len)
+	qml.Changed(ui, &ui.Info)
+	qml.Changed(ui, &ui.Metadata)
+	qml.Changed(ui, &ui.Cached)
 	ui.setStatus(status)
 }
 
@@ -145,7 +171,7 @@ func main() {
 }
 
 func run() error {
-	qml.SetApplicationName("GoPass")
+	qml.SetApplicationName("GoPass\n")
 	engine := qml.NewEngine()
 	engine.Context().SetVar("passwords", &ui)
 	controls, err := engine.LoadFile("qrc:/assets/main.qml")

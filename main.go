@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/atotto/clipboard"
-	"gopkg.in/qml.v1"
+	//"gopkg.in/qml.v1"
+	"github.com/limetext/qml-go"
 )
 
 // UI is the model for the password UI
@@ -171,7 +172,7 @@ func main() {
 }
 
 func run() error {
-	qml.SetApplicationName("GoPass\n")
+	qml.SetApplicationName("GoPass")
 	engine := qml.NewEngine()
 	engine.Context().SetVar("passwords", &ui)
 	controls, err := engine.LoadFile("qrc:/assets/main.qml")

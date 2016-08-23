@@ -193,7 +193,6 @@ ApplicationWindow {
                             }
                         }
                     }
-
                   Rectangle {
                     color: "#666"
                     border.color: "#666"

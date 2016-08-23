@@ -1,4 +1,3 @@
-
 ## Simple UI for password-store
 ![Screenshot](screencast.gif)
 
@@ -17,11 +16,13 @@ Ctrl-L selects the search box.
 
 ## Install
 If you have go installed:
-`go get github.com/cortex/gopass` 
+`go get github.com/cortex/gopass`
+
+For building, you need to install the genqrc command from github.com/limetext/qml-go
 
 Pre-built binaries coming soon.
 
-This might work on OSX, but I haven't tried building it. 
+This might work on OSX, but I haven't tried building it.
 
 Pull requests are very welcome!
 

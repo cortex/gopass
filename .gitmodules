@@ -3,7 +3,7 @@
 	url = git://github.com/atotto/clipboard
 [submodule "vendor/github.com/proglottis/gpgme"]
 	path = vendor/github.com/proglottis/gpgme
-	url = git://github.com/proglottis/gpgme
+	url = git://github.com/cortex/gpgme
 [submodule "vendor/github.com/rjeczalik/notify"]
 	path = vendor/github.com/rjeczalik/notify
 	url = git://github.com/rjeczalik/notify

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"crypto/rsa"
 	"crypto/sha1"
 	"errors"
@@ -14,12 +13,17 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/proglottis/gpgme"
 	"github.com/rjeczalik/notify"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/crypto/openpgp/packet"
 )
+
+// GPGME gets very sad when run from lots of goroutines at the same time
+// this lock ensures that all operations are serialized.
+var gpgmeMutex sync.Mutex
 
 // PasswordStore keeps track of all the passwords
 type PasswordStore struct {
@@ -38,6 +42,8 @@ type Password struct {
 }
 
 func (p *Password) decrypt() (io.Reader, error) {
+	gpgmeMutex.Lock()
+	defer gpgmeMutex.Unlock()
 	file, _ := os.Open(p.Path)
 	defer file.Close()
 	return gpgme.Decrypt(file)
@@ -118,14 +124,19 @@ func algoString(a packet.PublicKeyAlgorithm) string {
 
 // KeyInfo gets the KeyInfo for this password
 func (p *Password) KeyInfo() KeyInfo {
+	gpgmeMutex.Lock()
+	defer gpgmeMutex.Unlock()
 	// Find the keyID for the encrypted data
 	encKeyID := findKey(p.Path)
 
 	// Extract key from gpgme
 	c, _ := gpgme.New()
-	allKeys := c.Export(0)
-	kr := bytes.NewReader(allKeys)
-	el, err := openpgp.ReadKeyRing(kr)
+	allKeys, err := gpgme.NewData()
+	if err := c.Export(0, allKeys); err != nil {
+		fmt.Printf("error reading all keys %s", err)
+	}
+	allKeys.Seek(0, 0)
+	el, err := openpgp.ReadKeyRing(allKeys)
 	if err != nil {
 		fmt.Println("Failed to open keyring: ", err.Error())
 	}
@@ -142,9 +153,11 @@ func (p *Password) KeyInfo() KeyInfo {
 			out := sha1.Sum(append([]byte{0}, k.N.Bytes()...))
 			keygrip := fmt.Sprintf("%X", out)
 			c.SetProtocol(gpgme.ProtocolAssuan)
-			c.AssuanSend("keyinfo "+keygrip, func(status string, args string) {
-				ki.GPGAgentKeyInfo = parseKeyinfo(args)
-			})
+			c.AssuanSend("keyinfo "+keygrip, nil, nil,
+				func(status string, args string) error {
+					ki.GPGAgentKeyInfo = parseKeyinfo(args)
+					return nil
+				})
 			ki.Fingerprint = theKey.KeyIdShortString()
 			ki.Algorithm = algoString(theKey.PubKeyAlgo)
 			bl, _ := theKey.BitLength()
@@ -259,6 +272,7 @@ func (ps *PasswordStore) watch() {
 
 func (ps *PasswordStore) add(p Password) {
 	ps.passwords = append(ps.passwords, p)
+	fmt.Printf("added %s\n", p.Name)
 	ps.publishUpdate(fmt.Sprintf("Indexed %d entries", len(ps.passwords)))
 }
 

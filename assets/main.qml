@@ -74,7 +74,7 @@ ApplicationWindow {
                     font.pixelSize: 24
                     focus: true
 
-                    onTextChanged: passwords.query(text)
+                    onTextChanged: ui.query(text)
                     onAccepted: passwords.copyToClipboard(hitList.currentIndex)
                     textColor: "white"
                     style: TextFieldStyle {
@@ -121,7 +121,7 @@ ApplicationWindow {
                 Text {
                     id: status
                     Layout.fillWidth: true
-                    text: passwords.status
+                    text: ui.status
                     z: -1
                     height: 14
                     font.pixelSize: 14
@@ -165,8 +165,8 @@ ApplicationWindow {
 
                         Canvas{
                             id: progress
-                            property double countdown: passwords.countdown
-                            property bool cached: passwords.cached
+                            property double countdown: ui.countdown
+                            property bool cached: ui.password.cached
 
                             width: 100; height: 100
                             anchors.verticalCenter: parent.verticalCenter
@@ -208,7 +208,7 @@ ApplicationWindow {
                       color: "#aaa"
                       padding: 5
                       font.pixelSize: 10
-                      text: passwords.info
+                      text: ui.password.info
                     }
                   }
                   Item {
@@ -227,7 +227,7 @@ ApplicationWindow {
                             font.family: "Courier"
                             color: "white"
                             selectionColor: "#666"
-                            text: passwords.metadata
+                            text: ui.password.metadata
                             wrapMode: TextEdit.WordWrap
                         }
                     }
@@ -262,7 +262,7 @@ ApplicationWindow {
 
         Shortcut {
             sequence:"Ctrl+r"
-            onActivated: passwords.toggleshowmetadata()
+            onActivated: ui.toggleShowMetadata()
         }
 
         Shortcut {
@@ -273,7 +273,7 @@ ApplicationWindow {
         Shortcut {
             sequence: "Esc"
             context: Qt.ApplicationShortcut
-            onActivated: passwords.quit()
+            onActivated: ui.quit()
         }
 
         Component {
@@ -283,7 +283,7 @@ ApplicationWindow {
                 property var view: ListView.view
                 property int itemIndex: index
 
-                text: passwords.password(index).name;
+                text: passwords.get(index).name;
                 font.pixelSize: 18
                 color: ListView.isCurrentItem? "#dd00bb":"gray"
 

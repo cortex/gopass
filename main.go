@@ -7,27 +7,34 @@ import (
 	"time"
 
 	"github.com/atotto/clipboard"
-	//"gopkg.in/qml.v1"
 	"github.com/limetext/qml-go"
 )
 
 // UI is the model for the password UI
 type UI struct {
-	store    *PasswordStore
-	hits     []Password
-	query    string
-	Len      int
-	Selected int
-	Status   string
+	Status string
+	query  string
 
 	Countdown     float64
 	countingDown  bool
 	countdownDone chan bool
 
 	ShowMetadata bool
-	Metadata     string
-	Info         string
-	Cached       bool
+
+	Password struct {
+		Name     string
+		Metadata string
+		Info     string
+		Cached   bool
+	}
+}
+
+// Passwords is the model for the password list
+type Passwords struct {
+	Selected int
+	Len      int
+	store    *PasswordStore
+	hits     []Password
 }
 
 // Quit the application
@@ -46,13 +53,13 @@ func (ui *UI) ToggleShowMetadata() {
 	qml.Changed(ui, &ui.ShowMetadata)
 }
 
-// Password gets the password at a specific index
-func (ui *UI) Password(index int) Password {
-	if index > len(ui.hits) {
-		fmt.Println("Bad password fetch", index, len(ui.hits), ui.Len)
+// Get gets the password at a specific index
+func (p *Passwords) Get(index int) Password {
+	if index > len(p.hits) {
+		fmt.Println("Bad password fetch", index, len(p.hits), p.Len)
 		return Password{}
 	}
-	pw := ui.hits[index]
+	pw := p.hits[index]
 	return pw
 }
 
@@ -88,32 +95,31 @@ func (ui *UI) ClearClipboard() {
 }
 
 // CopyToClipboard copies the selected password to the system clipboard
-func (ui *UI) CopyToClipboard(selected int) {
-	if selected >= len(ui.hits) {
+func (p *Passwords) CopyToClipboard(selected int) {
+	if selected >= len(p.hits) {
 		ui.setStatus("No password selected")
 		return
 	}
-	pw := (ui.hits)[selected]
+	pw := (p.hits)[selected]
 	pass := pw.Password()
 	if err := clipboard.WriteAll(pass); err != nil {
 		panic(err)
 	}
 	ui.setStatus("Copied to clipboard")
 	go ui.ClearClipboard()
-	ui.Update("") // Trigger a manual update, since the key is probably unlocked now
+	p.Update("") // Trigger a manual update, since the key is probably unlocked now
 }
 
-func (ui *UI) Select(selected int) {
-	ui.Selected = selected
+func (p *Passwords) Select(selected int) {
+	p.Selected = selected
 	// Trigger an update in a goroutine to keep QML from warning about a binding loop
-	go func() { ui.Update("") }()
+	go func() { p.Update("") }()
 }
 
 // Query updates the hitlist with the given query
 func (ui *UI) Query(q string) {
 	ui.query = q
-	ui.setStatus(fmt.Sprintf("Matched %d items", ui.Len))
-	ui.Update("queried")
+	passwords.Update("queried")
 }
 
 func (ui *UI) setStatus(s string) {
@@ -126,45 +132,46 @@ func (ui *UI) setCountdown(c float64) {
 	qml.Changed(ui, &ui.Countdown)
 }
 func (ui *UI) setMetadata(s string) {
-	ui.Metadata = s
-	qml.Changed(ui, &ui.Metadata)
+	ui.Password.Metadata = s
+	qml.Changed(ui, &ui.Password.Metadata)
 }
 
 // Update is called whenever the store is updated, so the UI needs refreshing
-func (ui *UI) Update(status string) {
-	ui.hits = ui.store.Query(ui.query)
-	ui.Len = len(ui.hits)
+func (p *Passwords) Update(status string) {
+	p.hits = p.store.Query(ui.query)
+	p.Len = len(p.hits)
+
 	var pw Password
-	ui.Info = "Test"
-	if ui.Selected < ui.Len {
-		pw = (ui.hits)[ui.Selected]
+
+	ui.Password.Info = "Test"
+	if p.Selected < p.Len {
+		pw = (p.hits)[p.Selected]
 		ki := pw.KeyInfo()
-		ui.Info = fmt.Sprintf("Encrypted with %d bit %s key %s",
+		ui.Password.Info = fmt.Sprintf("Encrypted with %d bit %s key %s",
 			ki.BitLength, ki.Algorithm, ki.Fingerprint)
-		ui.Cached = ki.Cached
+		ui.Password.Cached = ki.Cached
 	}
 
 	if ui.ShowMetadata {
-		ui.Metadata = pw.Metadata()
+		ui.Password.Metadata = pw.Metadata()
 	} else {
-		ui.Metadata = "Press enter to decrypt"
+		ui.Password.Metadata = "Press enter to decrypt"
 	}
-
-	qml.Changed(ui, &ui.Len)
-	qml.Changed(ui, &ui.Info)
-	qml.Changed(ui, &ui.Metadata)
-	qml.Changed(ui, &ui.Cached)
+	qml.Changed(p, &p.Len)
+	qml.Changed(&ui, &ui.Password)
+	qml.Changed(&ui, &ui.Password.Metadata)
 	ui.setStatus(status)
 }
 
 var ui UI
+var passwords Passwords
 var ps *PasswordStore
 
 func main() {
 	ps = NewPasswordStore()
-	ui.store = ps
-	ps.Subscribe(ui.Update)
-	ui.Update("Started")
+	passwords.store = ps
+	ps.Subscribe(passwords.Update)
+	passwords.Update("Started")
 	if err := qml.Run(run); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -174,7 +181,9 @@ func main() {
 func run() error {
 	qml.SetApplicationName("GoPass")
 	engine := qml.NewEngine()
-	engine.Context().SetVar("passwords", &ui)
+	ui.ShowMetadata = true
+	engine.Context().SetVar("passwords", &passwords)
+	engine.Context().SetVar("ui", &ui)
 	controls, err := engine.LoadFile("qrc:/assets/main.qml")
 	if err != nil {
 		return err

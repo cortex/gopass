@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"crypto/rsa"
 	"crypto/sha1"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
@@ -49,6 +51,15 @@ func (p *Password) decrypt() (io.Reader, error) {
 	return gpgme.Decrypt(file)
 }
 
+// Raw returns the password in encrypted form
+func (p *Password) Raw() string {
+	file, _ := os.Open(p.Path)
+	defer file.Close()
+	data, _ := ioutil.ReadAll(file)
+	return base64.StdEncoding.EncodeToString(data)
+}
+
+// Metadata of the password
 func (p *Password) Metadata() string {
 	out, _ := p.decrypt()
 	nr := bufio.NewReader(out)

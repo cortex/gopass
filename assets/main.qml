@@ -133,7 +133,7 @@ ApplicationWindow {
                 id: frame
 
                 Layout.maximumWidth: 300
-                Layout.minimumWidth: 200
+                Layout.minimumWidth: 300
                 Layout.fillHeight: true
                 Layout.fillWidth: true
                 color: "#444"
@@ -193,34 +193,53 @@ ApplicationWindow {
                             }
                         }
                     }
-                  Rectangle {
-                    color: "#666"
-                    border.color: "#666"
-                    border.width: 2
-                    radius: 10
-                    Layout.fillHeight: false
-                    Layout.fillWidth: true
-                    Layout.maximumHeight: 40
-                    Layout.minimumHeight: 40
-                    Layout.margins: 5
-                    Text{
-                      id: info
-                      color: "#aaa"
-                      padding: 5
-                      font.pixelSize: 10
-                      text: ui.password.info
+                    Rectangle {
+                        id: rectangle1
+                        height: 24
+                        color: "#555"
+                        border.color: "#444"
+                        border.width: 2
+                        radius: 10
+                        Layout.fillHeight: false
+                        Layout.fillWidth: true
+                        Layout.maximumHeight: 24
+                        Layout.minimumHeight: 24
+                        Layout.margins: 5
+                        Text{
+                            id: info
+                            horizontalAlignment: Text.AlignHCenter
+                            color: "#aaa"
+                            padding: 5
+                            font.pixelSize: 10
+                            text: ui.password.info
+                            anchors.horizontalCenter: parent.horizontalCenter
+                       }
                     }
-                  }
-                  Item {
-                    id: metadataContainer
-                    Layout.fillHeight: true
-                    Layout.fillWidth: true
+                    RowLayout {
+                        id: rowLayout1
+                        width: 100
+                        height: 100
+                        Layout.fillWidth: true
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        RoundButton {
+                            label: "COPY"      
+                            onClicked: passwords.copyToClipboard(hitList.currentIndex)
+                        }
+                        RoundButton {
+                            label: "META"      
+                            onClicked: ui.toggleShowMetadata()
+                        }
+                    }
 
-                    Layout.margins: 5
+                    Item {
+                        id: metadataContainer
+                        Layout.fillHeight: true
+                        Layout.fillWidth: true
 
+                        Layout.margins: 10
                         TextEdit {
                             id: metadata
-                            anchors.fill: parent
+                            anchors.fill: metadataContainer
                             selectByMouse: true
                             readOnly: true
                             font.pixelSize: 12
@@ -228,11 +247,9 @@ ApplicationWindow {
                             color: "white"
                             selectionColor: "#666"
                             text: ui.password.metadata
-                            wrapMode: TextEdit.WordWrap
+                            wrapMode: TextEdit.WrapAnywhere
                         }
                     }
-
-
                 }
             }
         }

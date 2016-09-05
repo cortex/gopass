@@ -1,6 +1,6 @@
 package main
 
-//go:generate genqrc assets/main.qml assets/logo.svg
+//go:generate genqrc assets
 import (
 	"fmt"
 	"os"
@@ -50,6 +50,7 @@ func (ui *UI) Clearmetadata() {
 // ToggleShowMetadata toggles between showing and not showing metadata
 func (ui *UI) ToggleShowMetadata() {
 	ui.ShowMetadata = !ui.ShowMetadata
+	passwords.Update("")
 	qml.Changed(ui, &ui.ShowMetadata)
 }
 
@@ -147,15 +148,21 @@ func (p *Passwords) Update(status string) {
 	if p.Selected < p.Len {
 		pw = (p.hits)[p.Selected]
 		ki := pw.KeyInfo()
-		ui.Password.Info = fmt.Sprintf("Encrypted with %d bit %s key %s",
-			ki.BitLength, ki.Algorithm, ki.Fingerprint)
-		ui.Password.Cached = ki.Cached
+		if ki.Algorithm != "" {
+			ui.Password.Info = fmt.Sprintf("Encrypted with %d bit %s key %s",
+				ki.BitLength, ki.Algorithm, ki.Fingerprint)
+			ui.Password.Cached = ki.Cached
+		} else {
+			ui.Password.Info = "Not encrypted"
+			ui.Password.Cached = false
+		}
 	}
 
 	if ui.ShowMetadata {
 		ui.Password.Metadata = pw.Metadata()
 	} else {
 		ui.Password.Metadata = "Press enter to decrypt"
+		ui.Password.Metadata = pw.Raw()
 	}
 	qml.Changed(p, &p.Len)
 	qml.Changed(&ui, &ui.Password)
@@ -184,6 +191,10 @@ func run() error {
 	ui.ShowMetadata = true
 	engine.Context().SetVar("passwords", &passwords)
 	engine.Context().SetVar("ui", &ui)
+	_, err := engine.LoadFile("qrc:/assets/RoundButton.qml")
+	if err != nil {
+		return err
+	}
 	controls, err := engine.LoadFile("qrc:/assets/main.qml")
 	if err != nil {
 		return err

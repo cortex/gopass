@@ -111,6 +111,7 @@ func (p *Passwords) CopyToClipboard(selected int) {
 	p.Update("") // Trigger a manual update, since the key is probably unlocked now
 }
 
+// Select the password with the specified index
 func (p *Passwords) Select(selected int) {
 	p.Selected = selected
 	// Trigger an update in a goroutine to keep QML from warning about a binding loop
@@ -156,6 +157,7 @@ func (p *Passwords) Update(status string) {
 			ui.Password.Info = "Not encrypted"
 			ui.Password.Cached = false
 		}
+		ui.Password.Name = pw.Name
 	}
 
 	if ui.ShowMetadata {
@@ -167,6 +169,7 @@ func (p *Passwords) Update(status string) {
 	qml.Changed(p, &p.Len)
 	qml.Changed(&ui, &ui.Password)
 	qml.Changed(&ui, &ui.Password.Metadata)
+	qml.Changed(&ui, &ui.Password.Name)
 	ui.setStatus(status)
 }
 
@@ -188,7 +191,6 @@ func main() {
 func run() error {
 	qml.SetApplicationName("GoPass")
 	engine := qml.NewEngine()
-	ui.ShowMetadata = true
 	engine.Context().SetVar("passwords", &passwords)
 	engine.Context().SetVar("ui", &ui)
 	_, err := engine.LoadFile("qrc:/assets/RoundButton.qml")

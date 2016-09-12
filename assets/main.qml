@@ -131,9 +131,7 @@ ApplicationWindow {
 
             Rectangle {
                 id: frame
-
-                Layout.maximumWidth: 300
-                Layout.minimumWidth: 300
+                width: 250; height: 250;
                 Layout.fillHeight: true
                 Layout.fillWidth: true
                 color: "#444"
@@ -151,6 +149,20 @@ ApplicationWindow {
                         Layout.minimumHeight: 100
                         Layout.maximumHeight: 100
                         Layout.fillWidth: true
+                        MouseArea{
+                            onClicked: ui.toggleShowMetadata()
+                            width: 48; height: 48
+                            anchors.left: parent.left
+                            anchors.leftMargin: 25
+                            anchors.verticalCenter: parent.verticalCenter
+                        Image{
+                            id: metadataToggle
+                            width: 48; height: 48
+                            fillMode: Image.PreserveAspectFit
+                            source: ui.showMetadata ? "eye_open.svg": "eye_closed.svg"
+
+                        }
+                        }
                         Image {
                             id: logo
                             width: 48
@@ -158,9 +170,19 @@ ApplicationWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.horizontalCenter: parent.horizontalCenter
                             anchors.topMargin: 24
-
                             fillMode: Image.PreserveAspectFit
                             source: "logo.svg"
+                        }
+
+                        Image{
+                            id: copyIcon
+                            width: 48; height: 48
+                            anchors.right: parent.right
+                            anchors.rightMargin: 25
+                            fillMode: Image.PreserveAspectFit
+                            source: "copy.svg"
+                            anchors.verticalCenter: parent.verticalCenter
+
                         }
 
                         Canvas{
@@ -193,6 +215,14 @@ ApplicationWindow {
                             }
                         }
                     }
+                    Text{
+                        Layout.fillWidth: true;
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        horizontalAlignment: Text.AlignHCenter
+                        font.pixelSize: 18
+                        text: ui.password.name 
+                        color: "#eee"
+                    }
                     Rectangle {
                         id: rectangle1
                         height: 24
@@ -215,31 +245,39 @@ ApplicationWindow {
                             anchors.horizontalCenter: parent.horizontalCenter
                        }
                     }
+
+                    /*
                     RowLayout {
                         id: rowLayout1
                         width: 100
                         height: 100
                         Layout.fillWidth: true
                         anchors.horizontalCenter: parent.horizontalCenter
+                        
                         RoundButton {
                             label: "COPY"      
                             onClicked: passwords.copyToClipboard(hitList.currentIndex)
                         }
                         RoundButton {
-                            label: "META"      
+                            label: "SHOW"      
                             onClicked: ui.toggleShowMetadata()
                         }
+                        
                     }
-
-                    Item {
+*/
+                    ScrollView {
                         id: metadataContainer
                         Layout.fillHeight: true
                         Layout.fillWidth: true
-
                         Layout.margins: 10
+                        style: ScrollViewStyle{
+                            transientScrollBars: true
+                            scrollToClickedPosition : true
+                        }
                         TextEdit {
                             id: metadata
-                            anchors.fill: metadataContainer
+                            width: 270
+//                            anchors.fill: metadataContainer
                             selectByMouse: true
                             readOnly: true
                             font.pixelSize: 12

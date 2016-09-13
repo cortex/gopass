@@ -13,7 +13,6 @@ ApplicationWindow {
     title: "GoPass"
     width: 800
     height: 400
-    minimumWidth: mainLayout.Layout.minimumWidth + 2 * margin
     minimumHeight: 400
     x: (Screen.width - width) / 2
     flags: Qt.FramelessWindowHint | Qt.Window
@@ -61,8 +60,6 @@ ApplicationWindow {
 
             ColumnLayout {
                 id: leftPane
-
-                Layout.minimumWidth: 100
                 Layout.fillHeight: true
                 Layout.fillWidth: true
 
@@ -131,9 +128,8 @@ ApplicationWindow {
 
             Rectangle {
                 id: frame
-                width: 250; height: 250;
+                width: 300;
                 Layout.fillHeight: true
-                Layout.fillWidth: true
                 color: "#444"
                 border.color: "#333"
                 border.width: 2

@@ -283,7 +283,6 @@ func (ps *PasswordStore) watch() {
 
 func (ps *PasswordStore) add(p Password) {
 	ps.passwords = append(ps.passwords, p)
-	fmt.Printf("added %s\n", p.Name)
 	ps.publishUpdate(fmt.Sprintf("Indexed %d entries", len(ps.passwords)))
 }
 

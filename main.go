@@ -1,6 +1,6 @@
 package main
 
-//go:generate genqrc assets
+//go:generate go run vendor/github.com/limetext/qml-go/cmd/genqrc/main.go assets
 import (
 	"fmt"
 	"os"

@@ -1,21 +1,20 @@
-default: all
+default: build
 
-uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
+OS := $(shell uname)
 
-all:
-	#go get gopkg.in/qml.v1/cmd/genqrc
+build:
+	git submodule init
+	git submodule update
 	go generate
 	go build
 
-.PHONY: install
-install:
+install: build
 	go install
-ifeq ($(uname_S),Linux)
+ifeq ($(OS),Linux)
 		cp gopass.desktop ~/.local/share/applications
 		cp assets/logo.svg ~/.local/share/icons/hicolor/scalable/apps/gopass.svg
 endif
 
-.PHONY: clean
 clean:
 	rm qrc.go
 	go clean

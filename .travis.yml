@@ -12,3 +12,10 @@ script:
   - go get
   - go generate
   - go build
+deploy:
+  provider: releases
+  api_key: f52471e991738f9eeca82e5b1b446e51f5d94a35
+  file: gopass
+  skip_cleanup: true
+  on:
+    tags: true

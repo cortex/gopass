@@ -8,4 +8,6 @@ env:
 before_install:
   - brew update
   - brew install qt5
-script: echo "So what next?"
+script:
+  - go get
+  - go build

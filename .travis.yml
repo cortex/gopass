@@ -1,6 +1,7 @@
 os: osx
+osx_image: xcode8
 language: go
 before_install:
   - brew update
-  - brew install qt5 golang
+  - brew install qt5
 script: echo "So what next?"

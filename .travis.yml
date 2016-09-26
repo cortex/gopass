@@ -1,5 +1,5 @@
 language: go
 before_install:
   - brew update
-  - brew install qt5
+  - brew install qt5 golang
 script: echo "So what next?"

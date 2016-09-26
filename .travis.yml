@@ -8,6 +8,7 @@ env:
 before_install:
   - brew update
   - brew install qt5
+  - brew install gpgme
 script:
   - go get
   - go build

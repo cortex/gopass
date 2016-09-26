@@ -14,7 +14,7 @@ script:
   - go build
 deploy:
   provider: releases
-  api_key: f52471e991738f9eeca82e5b1b446e51f5d94a35
+  api_key: ec4cd024bf595affe4187b19e43d80b41dcb223b
   file: gopass
   skip_cleanup: true
   on:

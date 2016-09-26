@@ -7,8 +7,8 @@ env:
   PKG_CONFIG_PATH: /usr/local/opt/qt5/lib/pkgconfig
 before_install:
   - brew update
-  - brew install qt5
-  - brew install gpgme
+  - brew install qt5 gpgme
 script:
   - go get
+  - go generate
   - go build

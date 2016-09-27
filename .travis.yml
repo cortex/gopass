@@ -1,0 +1,21 @@
+os: osx
+osx_image: xcode8
+language: go
+env:
+  LDFLAGS:  -L/usr/local/opt/qt5/lib
+  CPPFLAGS: -I/usr/local/opt/qt5/include
+  PKG_CONFIG_PATH: /usr/local/opt/qt5/lib/pkgconfig
+before_install:
+  - brew update
+  - brew install qt5 gpgme
+script:
+  - go get
+  - go generate
+  - go build
+deploy:
+  provider: releases
+  api_key: ec4cd024bf595affe4187b19e43d80b41dcb223b
+  file: gopass
+  skip_cleanup: true
+  on:
+    tags: true

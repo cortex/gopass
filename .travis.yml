@@ -2,20 +2,21 @@ os: osx
 osx_image: xcode8
 language: go
 env:
-  LDFLAGS:  -L/usr/local/opt/qt5/lib
-  CPPFLAGS: -I/usr/local/opt/qt5/include
-  PKG_CONFIG_PATH: /usr/local/opt/qt5/lib/pkgconfig
+  LDFLAGS: "-L/usr/local/opt/qt5/lib"
+  CPPFLAGS: "-I/usr/local/opt/qt5/include"
+  PKG_CONFIG_PATH: "/usr/local/opt/qt5/lib/pkgconfig"
 before_install:
-  - brew update
-  - brew install qt5 gpgme
+- brew update
+- brew install qt5 gpgme
 script:
-  - go get
-  - go generate
-  - go build
+- go get
+- go generate
+- go build
 deploy:
   provider: releases
-  api_key: ec4cd024bf595affe4187b19e43d80b41dcb223b
   file: gopass
   skip_cleanup: true
   on:
     tags: true
+  api-key:
+    secure: Ix5OWD6iCXL+wNGZhodgGXeMP/j4zVowm8+eIw5ry/p862XkxTSvOi9Z8gzfrUzOPdlzjHbP6qd+lxyFLkscl26d9hPvbneX+uwowshjcTL+kyzDy37TI5sPbyfGx8KqhaqRP+Vjc3HLN4ulCtzfVrh8WZpcK9DGNf4NQspT6U7HdapO55ncmiHiIuwQC5CKOCM8ho/pYSg1HmpEUnvYhVbct3HNIeVehdG64qu281hsQm28dR9YU3o9twhLTi9Ak1mIkmxkhF+aW5asCez4eebU57tmzRm/DEimEDwZOa31n11zjJjeOCAfrpvPAXl0V18WPPIWqtGflMNM1xLA9OupSRq9Q7AZkUf8ys/dAH0jR6a5Rv3WwxDhTnRMC8aqoSxe3U94TkPRRVabECen8xGPheaGjQgls7R+pu8yCpo1wo2DY8yvUBsj7pNmlk2wDQdOh/kK09ucnb27RnOB2ZhS+voK294L4FgnKnQYF8oh5KUSBA4a8wxE1Gb86E0Te3Bx4Rd5CLpTfEJqbZ4Vk6QshvIwdrfNSbZvT03Zp+ONQoUPtkphAhYDZh6cbRWcGtHt4eZpgkoW96vvildUdj2S2R79Vjzgd4oir/srLUkSthb8A7h9E2OJf78KI6lWNBGIKLK9RnBmegmDcxUK0xh0O0o+JEMG/cyFq4ZzE1c=

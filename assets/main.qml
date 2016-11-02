@@ -74,7 +74,7 @@ ApplicationWindow {
                     onTextChanged: ui.query(text)
                     onAccepted: passwords.copyToClipboard(hitList.currentIndex)
 
-                    placeholderText: "Type to Search..."
+                    placeholderText: "Search your passwords..."
 
                     style: TextFieldStyle {
                         textColor: "white"

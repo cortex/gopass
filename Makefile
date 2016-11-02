@@ -11,8 +11,8 @@ build:
 install: build
 	go install
 ifeq ($(OS),Linux)
-		cp gopass.desktop ~/.local/share/applications
-		cp assets/logo.svg ~/.local/share/icons/hicolor/scalable/apps/gopass.svg
+		mkdir -p ~/.local/share/applications && cp gopass.desktop ~/.local/share/applications
+		mkdir -p ~/.local/share/icons/hicolor/scalable/apps && cp assets/logo.svg ~/.local/share/icons/hicolor/scalable/apps/gopass.svg
 endif
 
 clean:

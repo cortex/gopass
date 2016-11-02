@@ -73,9 +73,12 @@ ApplicationWindow {
 
                     onTextChanged: ui.query(text)
                     onAccepted: passwords.copyToClipboard(hitList.currentIndex)
-                    textColor: "white"
+
+                    placeholderText: "Search your passwords..."
+
                     style: TextFieldStyle {
                         textColor: "white"
+                        placeholderTextColor: "#444"
                         background: Rectangle {
                             radius: 5
                             border.color: "#666"
@@ -131,8 +134,6 @@ ApplicationWindow {
                 width: 300;
                 Layout.fillHeight: true
                 color: "#444"
-                border.color: "#333"
-                border.width: 2
                 radius: 10
 
                 ColumnLayout {
@@ -216,7 +217,7 @@ ApplicationWindow {
                         anchors.horizontalCenter: parent.horizontalCenter
                         horizontalAlignment: Text.AlignHCenter
                         font.pixelSize: 18
-                        text: ui.password.name 
+                        text: ui.password.name
                         color: "#eee"
                     }
                     Rectangle {
@@ -249,16 +250,16 @@ ApplicationWindow {
                         height: 100
                         Layout.fillWidth: true
                         anchors.horizontalCenter: parent.horizontalCenter
-                        
+
                         RoundButton {
-                            label: "COPY"      
+                            label: "COPY"
                             onClicked: passwords.copyToClipboard(hitList.currentIndex)
                         }
                         RoundButton {
-                            label: "SHOW"      
+                            label: "SHOW"
                             onClicked: ui.toggleShowMetadata()
                         }
-                        
+
                     }
 */
                     ScrollView {

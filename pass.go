@@ -13,8 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"fmt"
-
 	"github.com/proglottis/gpgme"
 	"github.com/rjeczalik/notify"
 )
@@ -156,21 +154,26 @@ func (ps *PasswordStore) watch() {
 
 	go func() {
 		for {
-			eventInfo := <-c
-			switch eventInfo.Event() {
-			case notify.Create:
-				ps.index(eventInfo.Path())
-			case notify.Remove:
-				ps.remove(eventInfo.Path())
-			case notify.Rename:
-				// EventInfo contains old path, but we don't know the new one. Update all
-				ps.indexAll()
-			case notify.Write:
-				// Path and Name haven ot changed, ignore.
-			}
-
+			ps.updateIndex(<-c)
 		}
 	}()
+}
+
+func (ps *PasswordStore) updateIndex(eventInfo notify.EventInfo) {
+	switch eventInfo.Event() {
+	case notify.Create:
+		ps.index(eventInfo.Path())
+		ps.publishUpdate("Entry added")
+	case notify.Remove:
+		ps.remove(eventInfo.Path())
+		ps.publishUpdate("Entry removed")
+	case notify.Rename:
+		// EventInfo contains old path, but we don't know the new one. Update all
+		ps.indexAll()
+		ps.publishUpdate("Index updated")
+	case notify.Write:
+		// Path and Name haven ot changed, ignore.
+	}
 }
 
 func (ps *PasswordStore) clearAll() {
@@ -179,7 +182,6 @@ func (ps *PasswordStore) clearAll() {
 
 func (ps *PasswordStore) add(p Password) {
 	ps.passwords = append(ps.passwords, p)
-	ps.publishUpdate(fmt.Sprintf("Indexed %d entries", len(ps.passwords)))
 }
 
 func (ps *PasswordStore) remove(path string) {
@@ -187,7 +189,6 @@ func (ps *PasswordStore) remove(path string) {
 		if p.Path == path {
 			ps.passwords[i] = ps.passwords[len(ps.passwords)-1]
 			ps.passwords = ps.passwords[:len(ps.passwords)-1]
-			ps.publishUpdate(fmt.Sprintf("Indexed %d entries", len(ps.passwords)))
 			return
 		}
 	}

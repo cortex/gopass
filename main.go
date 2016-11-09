@@ -121,7 +121,7 @@ func (p *Passwords) Select(selected int) {
 // Query updates the hitlist with the given query
 func (ui *UI) Query(q string) {
 	ui.query = q
-	passwords.Update("queried")
+	passwords.Update("Queried")
 }
 
 func (ui *UI) setStatus(s string) {
@@ -170,7 +170,9 @@ func (p *Passwords) Update(status string) {
 	qml.Changed(&ui, &ui.Password)
 	qml.Changed(&ui, &ui.Password.Metadata)
 	qml.Changed(&ui, &ui.Password.Name)
-	ui.setStatus(status)
+	if status != "" {
+		ui.setStatus(status)
+	}
 }
 
 var ui UI

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,6 +12,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"fmt"
 
 	"github.com/proglottis/gpgme"
 	"github.com/rjeczalik/notify"
@@ -119,23 +120,32 @@ func match(query, candidate string) bool {
 
 }
 
+func generateName(path, prefix string) string {
+	name := strings.TrimPrefix(path, prefix)
+	name = strings.TrimSuffix(name, ".gpg")
+	name = strings.TrimPrefix(name, "/")
+	const MaxLen = 40
+	if len(name) > MaxLen {
+		name = "..." + name[len(name)-MaxLen:]
+	}
+	return name
+}
+
 func (ps *PasswordStore) indexFile(path string, info os.FileInfo, err error) error {
 	if strings.HasSuffix(path, ".gpg") {
-		name := strings.TrimPrefix(path, ps.Prefix)
-		name = strings.TrimSuffix(name, ".gpg")
-		name = strings.TrimPrefix(name, "/")
-		const MaxLen = 40
-		if len(name) > MaxLen {
-			name = "..." + name[len(name)-MaxLen:]
-		}
-
+		name := generateName(path, ps.Prefix)
 		ps.add(Password{Name: name, Path: path})
 	}
 	return nil
 }
 
+func (ps *PasswordStore) index(path string) {
+	filepath.Walk(path, ps.indexFile)
+}
+
 func (ps *PasswordStore) indexAll() {
-	filepath.Walk(ps.Prefix, ps.indexFile)
+	ps.clearAll()
+	ps.index(ps.Prefix)
 }
 
 func (ps *PasswordStore) watch() {
@@ -146,15 +156,41 @@ func (ps *PasswordStore) watch() {
 
 	go func() {
 		for {
-			<-c
-			ps.indexAll()
+			eventInfo := <-c
+			switch eventInfo.Event() {
+			case notify.Create:
+				ps.index(eventInfo.Path())
+			case notify.Remove:
+				ps.remove(eventInfo.Path())
+			case notify.Rename:
+				// EventInfo contains old path, but we don't know the new one. Update all
+				ps.indexAll()
+			case notify.Write:
+				// Path and Name haven ot changed, ignore.
+			}
+
 		}
 	}()
+}
+
+func (ps *PasswordStore) clearAll() {
+	ps.passwords = nil
 }
 
 func (ps *PasswordStore) add(p Password) {
 	ps.passwords = append(ps.passwords, p)
 	ps.publishUpdate(fmt.Sprintf("Indexed %d entries", len(ps.passwords)))
+}
+
+func (ps *PasswordStore) remove(path string) {
+	for i, p := range ps.passwords {
+		if p.Path == path {
+			ps.passwords[i] = ps.passwords[len(ps.passwords)-1]
+			ps.passwords = ps.passwords[:len(ps.passwords)-1]
+			ps.publishUpdate(fmt.Sprintf("Indexed %d entries", len(ps.passwords)))
+			return
+		}
+	}
 }
 
 func findPasswordStore() (string, error) {

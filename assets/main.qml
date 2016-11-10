@@ -20,12 +20,7 @@ ApplicationWindow {
 
     MouseArea {
         id: mouseRegion
-        property variant clickPos: "1,1"
-        anchors.rightMargin: 0
-        anchors.bottomMargin: 0
-        anchors.leftMargin: 0
-        anchors.topMargin: 0
-
+        property var clickPos: "1, 1"
         anchors.fill: parent;
 
         onPressed: {
@@ -44,10 +39,6 @@ ApplicationWindow {
 
         color: "#333"
         radius: 10
-        anchors.rightMargin: 0
-        anchors.bottomMargin: 0
-        anchors.leftMargin: 0
-        anchors.topMargin: 0
         anchors.fill: parent
         border.width: 2
         border.color: "#aaa"

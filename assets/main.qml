@@ -326,7 +326,7 @@ ApplicationWindow {
                 property var view: ListView.view
                 property int itemIndex: index
 
-                text: passwords.get(index).name;
+                text: passwords.get(index);
                 font.pixelSize: 18
                 color: ListView.isCurrentItem? "#dd00bb":"gray"
 

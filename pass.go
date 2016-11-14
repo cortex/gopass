@@ -29,39 +29,33 @@ type PasswordStore struct {
 // Subscriber is a callback for changes in the PasswordStore
 type Subscriber func(status string)
 
-// A Password entry in Passwords
-type Password struct {
-	Name string
-	Path string
-}
-
-func (p *Password) decrypt() (io.Reader, error) {
+func decrypt(path string) (io.Reader, error) {
 	gpgmeMutex.Lock()
 	defer gpgmeMutex.Unlock()
-	file, _ := os.Open(p.Path)
+	file, _ := os.Open(path)
 	defer file.Close()
 	return gpgme.Decrypt(file)
 }
 
 // Raw returns the password in encrypted form
-func (p *Password) Raw() string {
-	file, _ := os.Open(p.Path)
+func Raw(path string) string {
+	file, _ := os.Open(path)
 	defer file.Close()
 	data, _ := ioutil.ReadAll(file)
 	return base64.StdEncoding.EncodeToString(data)
 }
 
 // Metadata of the password
-func (p *Password) Metadata() string {
-	out, _ := p.decrypt()
+func Metadata(path string) string {
+	out, _ := decrypt(path)
 	nr := bufio.NewReader(out)
 	nr.ReadString('\n')
 	metadata, _ := nr.ReadString('\003')
 	return metadata
 }
 
-func (p *Password) Password() string {
-	decrypted, _ := p.decrypt()
+func Password(path string) string {
+	decrypted, _ := decrypt(path)
 	nr := bufio.NewReader(decrypted)
 	password, _ := nr.ReadString('\n')
 	return password
@@ -81,22 +75,16 @@ func NewPasswordStore() *PasswordStore {
 	return ps
 }
 
-type byName []Password
-
-func (a byName) Len() int           { return len(a) }
-func (a byName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a byName) Less(i, j int) bool { return a[i].Name < a[j].Name }
-
 // Query the PasswordStore
-func (ps *PasswordStore) Query(q string) []Password {
-	var hits []Password
+func (ps *PasswordStore) Query(q string) []string {
+	var hits []string
 	for pwPath, pwName := range ps.passwords {
 		if match(q, pwName) {
-			hits = append(hits, Password{Name: pwName, Path: pwPath})
+			hits = append(hits, pwPath)
 		}
 	}
 
-	sort.Sort(byName(hits))
+	sort.Strings(hits)
 	return hits
 }
 

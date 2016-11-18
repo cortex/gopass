@@ -179,7 +179,10 @@ ApplicationWindow {
                             fillMode: Image.PreserveAspectFit
                             source: "copy.svg"
                             anchors.verticalCenter: parent.verticalCenter
-
+                            MouseArea{
+                                anchors.fill: parent
+                                onClicked: passwords.copyToClipboard(hitList.currentIndex)
+                            }
                         }
 
                         Canvas{

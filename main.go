@@ -102,7 +102,12 @@ func (p *Passwords) CopyToClipboard(selected int) {
 		return
 	}
 	pw := (p.hits)[selected]
-	pass := pw.Password()
+	pass, err := pw.Password()
+	if err != nil {
+		ui.setStatus("Cancelled")
+		return
+	}
+
 	if err := clipboard.WriteAll(pass); err != nil {
 		panic(err)
 	}

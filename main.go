@@ -6,8 +6,15 @@ import (
 	"os"
 	"time"
 
+	"sync"
+
 	"github.com/atotto/clipboard"
 	"github.com/limetext/qml-go"
+)
+
+const (
+	timeoutTickDuration = 10 * time.Millisecond
+	clipboardTimeout    = 15 * time.Second
 )
 
 // UI is the model for the password UI
@@ -15,9 +22,10 @@ type UI struct {
 	Status string
 	query  string
 
-	Countdown     float64
-	countingDown  bool
-	countdownDone chan bool
+	lock           sync.Mutex
+	Countdown      float64
+	countingDown   bool
+	resetCountdown chan bool
 
 	ShowMetadata bool
 
@@ -27,6 +35,18 @@ type UI struct {
 		Info     string
 		Cached   bool
 	}
+}
+
+func (ui *UI) isCountingDown() bool {
+	ui.lock.Lock()
+	defer ui.lock.Unlock()
+	return ui.countingDown
+}
+
+func (ui *UI) setCountingDown(value bool) {
+	ui.lock.Lock()
+	defer ui.lock.Unlock()
+	ui.countingDown = value
 }
 
 // Passwords is the model for the password list
@@ -66,28 +86,28 @@ func (p *Passwords) Get(index int) Password {
 
 // ClearClipboard clears the clipboard
 func (ui *UI) ClearClipboard() {
-	if ui.countingDown {
-		ui.countdownDone <- true
+
+	if ui.isCountingDown() {
+		ui.resetCountdown <- true
+		return
 	}
-	ui.countingDown = true
-	tick := 10 * time.Millisecond
-	t := time.NewTicker(tick)
-	remaining := 15.0
+
+	ui.setCountingDown(true)
+	defer ui.setCountingDown(false)
+	t := time.NewTicker(timeoutTickDuration)
+	remaining := clipboardTimeout
 	for {
 		select {
-		case <-ui.countdownDone:
-			t.Stop()
-			ui.countingDown = false
-			return
+		case <-ui.resetCountdown:
+			remaining = clipboardTimeout
 		case <-t.C:
-			ui.setCountdown(remaining)
-			ui.setStatus(fmt.Sprintf("Will clear in %.f seconds", remaining))
-			remaining -= tick.Seconds()
+			ui.setCountdown(remaining.Seconds())
+			ui.setStatus(fmt.Sprintf("Will clear in %.f seconds", remaining.Seconds()))
+			remaining -= timeoutTickDuration
 			if remaining <= 0 {
 				clipboard.WriteAll("")
 				ui.Clearmetadata()
 				ui.setStatus("Clipboard cleared")
-				ui.countingDown = false
 				t.Stop()
 				return
 			}
@@ -183,7 +203,7 @@ var passwords Passwords
 var ps *PasswordStore
 
 func main() {
-	ui.countdownDone = make(chan bool)
+	ui.resetCountdown = make(chan bool)
 	ps = NewPasswordStore()
 	passwords.store = ps
 	ps.Subscribe(passwords.Update)

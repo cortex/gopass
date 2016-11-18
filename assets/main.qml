@@ -345,6 +345,10 @@ ApplicationWindow {
                 MouseArea{
                     anchors.fill: parent
                     onClicked: view.currentIndex = itemIndex
+                    onDoubleClicked: {
+                        clicked(passwordEntry)
+                        passwords.copyToClipboard(hitList.currentIndex)
+                    }
                 }
             }
         }

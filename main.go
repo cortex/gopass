@@ -183,6 +183,7 @@ var passwords Passwords
 var ps *PasswordStore
 
 func main() {
+	ui.countdownDone = make(chan bool)
 	ps = NewPasswordStore()
 	passwords.store = ps
 	ps.Subscribe(passwords.Update)

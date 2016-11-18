@@ -152,13 +152,12 @@ ApplicationWindow {
                             anchors.left: parent.left
                             anchors.leftMargin: 25
                             anchors.verticalCenter: parent.verticalCenter
-                        Image{
-                            id: metadataToggle
-                            width: 48; height: 48
-                            fillMode: Image.PreserveAspectFit
-                            source: ui.showMetadata ? "eye_open.svg": "eye_closed.svg"
-
-                        }
+                            Image{
+                                id: metadataToggle
+                                width: 48; height: 48
+                                fillMode: Image.PreserveAspectFit
+                                source: ui.showMetadata ? "eye_open.svg": "eye_closed.svg"
+                            }
                         }
                         Image {
                             id: logo

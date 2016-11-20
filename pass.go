@@ -83,7 +83,7 @@ func NewPasswordStore() *PasswordStore {
 func (ps *PasswordStore) Query(q string) []Password {
 	var hits []Password
 	for _, p := range ps.passwords {
-		if match(q, p.Name) {
+		if match(q, p.Path) {
 			hits = append(hits, p)
 		}
 	}

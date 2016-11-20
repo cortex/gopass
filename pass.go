@@ -120,6 +120,11 @@ func match(query, candidate string) bool {
 }
 
 func (ps *PasswordStore) indexFile(path string, info os.FileInfo, err error) error {
+	if strings.Compare(ps.Prefix, path) != 0 &&
+		strings.HasPrefix(info.Name(), ".") &&
+		info.IsDir() {
+		return filepath.SkipDir
+	}
 	if strings.HasSuffix(path, ".gpg") {
 		name := strings.TrimPrefix(path, ps.Prefix)
 		name = strings.TrimSuffix(name, ".gpg")

@@ -22,10 +22,8 @@ type UI struct {
 	Status string
 	query  string
 
-	lock           sync.Mutex
-	Countdown      float64
-	countingDown   bool
-	resetCountdown chan bool
+	Countdown float64
+	counter   Counter
 
 	ShowMetadata bool
 
@@ -37,16 +35,47 @@ type UI struct {
 	}
 }
 
-func (ui *UI) isCountingDown() bool {
-	ui.lock.Lock()
-	defer ui.lock.Unlock()
-	return ui.countingDown
+type Counter struct {
+	sync.Mutex
+	t            *time.Ticker
+	remaining    time.Duration
+	countingDown bool
 }
 
-func (ui *UI) setCountingDown(value bool) {
-	ui.lock.Lock()
-	defer ui.lock.Unlock()
-	ui.countingDown = value
+func (c *Counter) isRunning() bool {
+	c.Lock()
+	defer c.Unlock()
+	return c.countingDown
+}
+
+func (c *Counter) start(onTick func(remaining float64)) {
+	c.Lock()
+	defer c.Unlock()
+	c.remaining = clipboardTimeout
+	c.countingDown = true
+	c.t = time.NewTicker(timeoutTickDuration)
+	go func() {
+		for {
+			<-c.t.C
+			c.Lock()
+			c.remaining -= timeoutTickDuration
+			c.Unlock()
+			onTick(c.remaining.Seconds())
+		}
+	}()
+}
+
+func (c *Counter) stop() {
+	c.Lock()
+	defer c.Unlock()
+	c.countingDown = false
+	c.t.Stop()
+}
+
+func (c *Counter) reset() {
+	c.Lock()
+	defer c.Unlock()
+	c.remaining = clipboardTimeout
 }
 
 // Passwords is the model for the password list
@@ -87,32 +116,23 @@ func (p *Passwords) Get(index int) Password {
 // ClearClipboard clears the clipboard
 func (ui *UI) ClearClipboard() {
 
-	if ui.isCountingDown() {
-		ui.resetCountdown <- true
+	if ui.counter.isRunning() {
+		ui.counter.reset()
 		return
 	}
 
-	ui.setCountingDown(true)
-	defer ui.setCountingDown(false)
-	t := time.NewTicker(timeoutTickDuration)
-	remaining := clipboardTimeout
-	for {
-		select {
-		case <-ui.resetCountdown:
-			remaining = clipboardTimeout
-		case <-t.C:
-			ui.setCountdown(remaining.Seconds())
-			ui.setStatus(fmt.Sprintf("Will clear in %.f seconds", remaining.Seconds()))
-			remaining -= timeoutTickDuration
-			if remaining <= 0 {
-				clipboard.WriteAll("")
-				ui.Clearmetadata()
-				ui.setStatus("Clipboard cleared")
-				t.Stop()
-				return
-			}
+	onTick := func(remaining float64) {
+		ui.setCountdown(ui.counter.remaining.Seconds())
+		ui.setStatus(fmt.Sprintf("Will clear in %.f seconds", remaining))
+		if remaining <= 0 {
+			clipboard.WriteAll("")
+			ui.Clearmetadata()
+			ui.setStatus("Clipboard cleared")
+			ui.counter.stop()
 		}
 	}
+
+	ui.counter.start(onTick)
 }
 
 // CopyToClipboard copies the selected password to the system clipboard
@@ -132,7 +152,7 @@ func (p *Passwords) CopyToClipboard(selected int) {
 		panic(err)
 	}
 	ui.setStatus("Copied to clipboard")
-	go ui.ClearClipboard()
+	ui.ClearClipboard()
 	p.Update("") // Trigger a manual update, since the key is probably unlocked now
 }
 
@@ -203,7 +223,6 @@ var passwords Passwords
 var ps *PasswordStore
 
 func main() {
-	ui.resetCountdown = make(chan bool)
 	ps = NewPasswordStore()
 	passwords.store = ps
 	ps.Subscribe(passwords.Update)

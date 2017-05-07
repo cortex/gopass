@@ -1,4 +1,4 @@
-[UNMAINTANED] I have decided to continue development with [Ripasso](https://github.com/cortex/ripasso) instead! Check it out!
+[UNMAINTANED] I have decided to continue development with [Ripasso](https://github.com/cortex/ripasso) instead! Check it out! If you are curious why, I wrote [this](http://lundborg.io/blog/Gopass-is-dead-long-live-Ripasso/)
 
 ## Simple UI for password-store
 ![Screenshot](screencast.gif)

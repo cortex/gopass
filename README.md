@@ -1,3 +1,5 @@
+[UNMAINTANED] I have decided to continue development with [Ripasso](https://github.com/cortex/ripasso) instead! Check it out!
+
 ## Simple UI for password-store
 ![Screenshot](screencast.gif)
 

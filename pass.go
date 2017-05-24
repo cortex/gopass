@@ -59,11 +59,14 @@ func (p *Password) Metadata() string {
 	return metadata
 }
 
-func (p *Password) Password() string {
-	decrypted, _ := p.decrypt()
+func (p *Password) Password() (string, error) {
+	decrypted, err := p.decrypt()
+	if err != nil {
+		return "", err
+	}
 	nr := bufio.NewReader(decrypted)
 	password, _ := nr.ReadString('\n')
-	return password
+	return password, nil
 }
 
 // NewPasswordStore creates a new password store

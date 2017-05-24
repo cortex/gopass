@@ -97,7 +97,7 @@ func (ui *UI) ClearClipboard() {
 
 // CopyToClipboard copies the selected password to the system clipboard
 func (p *Passwords) CopyToClipboard(selected int) {
-	if selected >= len(p.hits) {
+	if selected < 0 || selected >= len(p.hits) {
 		ui.setStatus("No password selected")
 		return
 	}
@@ -143,11 +143,12 @@ func (p *Passwords) Update(status string) {
 	p.hits = p.store.Query(ui.query)
 	p.Len = len(p.hits)
 
-	var pw Password
+	ui.Password.Info = "No info available"
+	ui.Password.Name = ""
+	ui.Password.Metadata = ""
 
-	ui.Password.Info = "Test"
-	if p.Selected < p.Len {
-		pw = (p.hits)[p.Selected]
+	if 0 <= p.Selected && p.Selected < p.Len {
+		pw := (p.hits)[p.Selected]
 		ki := pw.KeyInfo()
 		if ki.Algorithm != "" {
 			ui.Password.Info = fmt.Sprintf("Encrypted with %d bit %s key %s",
@@ -158,18 +159,18 @@ func (p *Passwords) Update(status string) {
 			ui.Password.Cached = false
 		}
 		ui.Password.Name = pw.Name
+		if ui.ShowMetadata {
+			ui.Password.Metadata = pw.Metadata()
+		} else {
+			ui.Password.Metadata = "Press enter to decrypt"
+			ui.Password.Metadata = pw.Raw()
+		}
 	}
 
-	if ui.ShowMetadata {
-		ui.Password.Metadata = pw.Metadata()
-	} else {
-		ui.Password.Metadata = "Press enter to decrypt"
-		ui.Password.Metadata = pw.Raw()
-	}
 	qml.Changed(p, &p.Len)
-	qml.Changed(&ui, &ui.Password)
-	qml.Changed(&ui, &ui.Password.Metadata)
+	qml.Changed(&ui, &ui.Password.Info)
 	qml.Changed(&ui, &ui.Password.Name)
+	qml.Changed(&ui, &ui.Password.Metadata)
 	ui.setStatus(status)
 }
 

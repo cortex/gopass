@@ -34,7 +34,7 @@ type Passwords struct {
 	Selected int
 	Len      int
 	store    *PasswordStore
-	hits     []Password
+	hits     []string
 }
 
 // Quit the application
@@ -55,13 +55,13 @@ func (ui *UI) ToggleShowMetadata() {
 }
 
 // Get gets the password at a specific index
-func (p *Passwords) Get(index int) Password {
+func (p *Passwords) Get(index int) string {
 	if index > len(p.hits) {
 		fmt.Println("Bad password fetch", index, len(p.hits), p.Len)
-		return Password{}
+		return ""
 	}
 	pw := p.hits[index]
-	return pw
+	return p.store.passwords[pw]
 }
 
 // ClearClipboard clears the clipboard
@@ -101,8 +101,7 @@ func (p *Passwords) CopyToClipboard(selected int) {
 		ui.setStatus("No password selected")
 		return
 	}
-	pw := (p.hits)[selected]
-	pass := pw.Password()
+	pass := Password(p.hits[selected])
 	if err := clipboard.WriteAll(pass); err != nil {
 		panic(err)
 	}
@@ -121,7 +120,7 @@ func (p *Passwords) Select(selected int) {
 // Query updates the hitlist with the given query
 func (ui *UI) Query(q string) {
 	ui.query = q
-	passwords.Update("queried")
+	passwords.Update("Queried")
 }
 
 func (ui *UI) setStatus(s string) {
@@ -143,12 +142,12 @@ func (p *Passwords) Update(status string) {
 	p.hits = p.store.Query(ui.query)
 	p.Len = len(p.hits)
 
-	var pw Password
+	var pw string
 
 	ui.Password.Info = "Test"
 	if p.Selected < p.Len {
 		pw = (p.hits)[p.Selected]
-		ki := pw.KeyInfo()
+		ki := keyInfo(pw)
 		if ki.Algorithm != "" {
 			ui.Password.Info = fmt.Sprintf("Encrypted with %d bit %s key %s",
 				ki.BitLength, ki.Algorithm, ki.Fingerprint)
@@ -157,30 +156,31 @@ func (p *Passwords) Update(status string) {
 			ui.Password.Info = "Not encrypted"
 			ui.Password.Cached = false
 		}
-		ui.Password.Name = pw.Name
+		ui.Password.Name = p.store.passwords[pw]
 	}
 
 	if ui.ShowMetadata {
-		ui.Password.Metadata = pw.Metadata()
+		ui.Password.Metadata = Metadata(pw)
 	} else {
 		ui.Password.Metadata = "Press enter to decrypt"
-		ui.Password.Metadata = pw.Raw()
+		ui.Password.Metadata = Raw(pw)
 	}
 	qml.Changed(p, &p.Len)
 	qml.Changed(&ui, &ui.Password)
 	qml.Changed(&ui, &ui.Password.Metadata)
 	qml.Changed(&ui, &ui.Password.Name)
-	ui.setStatus(status)
+	if status != "" {
+		ui.setStatus(status)
+	}
 }
 
 var ui UI
 var passwords Passwords
-var ps *PasswordStore
 
 func main() {
-	ps = NewPasswordStore()
-	passwords.store = ps
+	ps := NewPasswordStore()
 	ps.Subscribe(passwords.Update)
+	passwords.store = ps
 	passwords.Update("Started")
 	if err := qml.Run(run); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)

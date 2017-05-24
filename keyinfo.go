@@ -67,11 +67,6 @@ func parseKeyinfo(statusLine string) GPGAgentKeyInfo {
 	}
 }
 
-func (p *Password) isCached() bool {
-	ki := p.KeyInfo()
-	return ki.Cached
-}
-
 var algoNames map[packet.PublicKeyAlgorithm]string
 
 func init() {
@@ -91,11 +86,11 @@ func algoString(a packet.PublicKeyAlgorithm) string {
 }
 
 // KeyInfo gets the KeyInfo for this password
-func (p *Password) KeyInfo() KeyInfo {
+func keyInfo(path string) KeyInfo {
 	gpgmeMutex.Lock()
 	defer gpgmeMutex.Unlock()
 	// Find the keyID for the encrypted data
-	encKeyID := findKey(p.Path)
+	encKeyID := findKey(path)
 
 	// Extract key from gpgme
 	c, _ := gpgme.New()

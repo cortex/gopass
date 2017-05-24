@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -14,13 +13,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"sort"
+
 	"github.com/proglottis/gpgme"
 	"github.com/rjeczalik/notify"
 )
 
 // PasswordStore keeps track of all the passwords
 type PasswordStore struct {
-	passwords   []Password
+	passwords   map[string]string
 	Prefix      string
 	subscribers []Subscriber
 }
@@ -28,39 +29,33 @@ type PasswordStore struct {
 // Subscriber is a callback for changes in the PasswordStore
 type Subscriber func(status string)
 
-// A Password entry in Passwords
-type Password struct {
-	Name string
-	Path string
-}
-
-func (p *Password) decrypt() (io.Reader, error) {
+func decrypt(path string) (io.Reader, error) {
 	gpgmeMutex.Lock()
 	defer gpgmeMutex.Unlock()
-	file, _ := os.Open(p.Path)
+	file, _ := os.Open(path)
 	defer file.Close()
 	return gpgme.Decrypt(file)
 }
 
 // Raw returns the password in encrypted form
-func (p *Password) Raw() string {
-	file, _ := os.Open(p.Path)
+func Raw(path string) string {
+	file, _ := os.Open(path)
 	defer file.Close()
 	data, _ := ioutil.ReadAll(file)
 	return base64.StdEncoding.EncodeToString(data)
 }
 
 // Metadata of the password
-func (p *Password) Metadata() string {
-	out, _ := p.decrypt()
+func Metadata(path string) string {
+	out, _ := decrypt(path)
 	nr := bufio.NewReader(out)
 	nr.ReadString('\n')
 	metadata, _ := nr.ReadString('\003')
 	return metadata
 }
 
-func (p *Password) Password() string {
-	decrypted, _ := p.decrypt()
+func Password(path string) string {
+	decrypted, _ := decrypt(path)
 	nr := bufio.NewReader(decrypted)
 	password, _ := nr.ReadString('\n')
 	return password
@@ -74,19 +69,22 @@ func NewPasswordStore() *PasswordStore {
 		log.Fatal(err)
 	}
 	ps.Prefix = path
+	ps.passwords = make(map[string]string)
 	ps.indexAll()
 	ps.watch()
 	return ps
 }
 
 // Query the PasswordStore
-func (ps *PasswordStore) Query(q string) []Password {
-	var hits []Password
-	for _, p := range ps.passwords {
-		if match(q, p.Name) {
-			hits = append(hits, p)
+func (ps *PasswordStore) Query(q string) []string {
+	var hits []string
+	for pwPath, pwName := range ps.passwords {
+		if match(q, pwName) {
+			hits = append(hits, pwPath)
 		}
 	}
+
+	sort.Strings(hits)
 	return hits
 }
 
@@ -119,23 +117,30 @@ func match(query, candidate string) bool {
 
 }
 
+func generateName(path, prefix string) string {
+	name := strings.TrimPrefix(path, prefix)
+	name = strings.TrimSuffix(name, ".gpg")
+	name = strings.TrimPrefix(name, "/")
+	const MaxLen = 40
+	if len(name) > MaxLen {
+		name = "..." + name[len(name)-MaxLen:]
+	}
+	return name
+}
+
 func (ps *PasswordStore) indexFile(path string, info os.FileInfo, err error) error {
 	if strings.HasSuffix(path, ".gpg") {
-		name := strings.TrimPrefix(path, ps.Prefix)
-		name = strings.TrimSuffix(name, ".gpg")
-		name = strings.TrimPrefix(name, "/")
-		const MaxLen = 40
-		if len(name) > MaxLen {
-			name = "..." + name[len(name)-MaxLen:]
-		}
-
-		ps.add(Password{Name: name, Path: path})
+		ps.add(path)
 	}
 	return nil
 }
 
+func (ps *PasswordStore) index(path string) {
+	filepath.Walk(path, ps.indexFile)
+}
+
 func (ps *PasswordStore) indexAll() {
-	filepath.Walk(ps.Prefix, ps.indexFile)
+	ps.index(ps.Prefix)
 }
 
 func (ps *PasswordStore) watch() {
@@ -146,15 +151,34 @@ func (ps *PasswordStore) watch() {
 
 	go func() {
 		for {
-			<-c
-			ps.indexAll()
+			ps.updateIndex(<-c)
 		}
 	}()
 }
 
-func (ps *PasswordStore) add(p Password) {
-	ps.passwords = append(ps.passwords, p)
-	ps.publishUpdate(fmt.Sprintf("Indexed %d entries", len(ps.passwords)))
+func (ps *PasswordStore) updateIndex(eventInfo notify.EventInfo) {
+	switch eventInfo.Event() {
+	case notify.Create:
+		ps.index(eventInfo.Path())
+		ps.publishUpdate("Entry added")
+	case notify.Remove:
+		ps.remove(eventInfo.Path())
+		ps.publishUpdate("Entry removed")
+	case notify.Rename:
+		ps.remove(eventInfo.Path())
+		ps.indexAll()
+		ps.publishUpdate("Index updated")
+	case notify.Write:
+		// Path and Name haven ot changed, ignore.
+	}
+}
+
+func (ps *PasswordStore) add(path string) {
+	ps.passwords[path] = generateName(path, ps.Prefix)
+}
+
+func (ps *PasswordStore) remove(path string) {
+	delete(ps.passwords, path)
 }
 
 func findPasswordStore() (string, error) {
